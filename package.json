@@ -1,0 +1,47 @@
+{
+  "name": "@owockibot/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript/TypeScript SDK for interacting with owockibot APIs - ratio tracker, bounty board, treasury stats",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepublishOnly": "npm run build",
+    "dev": "ts-node src/examples/basic.ts"
+  },
+  "keywords": [
+    "owockibot",
+    "agent",
+    "bounty",
+    "treasury",
+    "crypto",
+    "ai-agent",
+    "coordination",
+    "sdk"
+  ],
+  "author": "owockibot community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/owockibot/sdk.git"
+  },
+  "homepage": "https://owockibot.xyz",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.7"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -6,8 +6,11 @@ import {
   TokenInfo,
   RatioData,
   SwarmStats,
-  ApiResponse,
   ApiError,
+  NotFoundError,
+  ValidationError,
+  RateLimitError,
+  ServerError,
   BountyStatus
 } from './types';
 
@@ -35,17 +38,23 @@ export class OwockibotClient {
     this.http.interceptors.response.use(
       (response) => response,
       (error) => {
-        const apiError: ApiError = {
-          message: error.message,
-          status: error.response?.status,
-          code: error.code
-        };
-        
-        if (error.response?.data?.message) {
-          apiError.message = error.response.data.message;
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        const code = error.code;
+
+        // Determine specific error type based on status code
+        if (status === 404) {
+          return Promise.reject(new NotFoundError(message, code));
+        } else if (status === 400) {
+          return Promise.reject(new ValidationError(message, code));
+        } else if (status === 429) {
+          return Promise.reject(new RateLimitError(message, code));
+        } else if (status && status >= 500) {
+          return Promise.reject(new ServerError(message, status, code));
+        } else {
+          // Generic API error for other status codes or unknown errors
+          return Promise.reject(new ApiError(message, status, code));
         }
-        
-        return Promise.reject(apiError);
       }
     );
   }
@@ -60,7 +69,7 @@ export class OwockibotClient {
       const response: AxiosResponse<Bounty[]> = await this.http.get('/bounty-board');
       return response.data;
     } catch (error) {
-      throw this.handleError(error, 'Failed to fetch bounties');
+      throw error;
     }
   }
 
@@ -72,19 +81,19 @@ export class OwockibotClient {
       const bounties = await this.getBounties();
       return bounties.find(b => b.id === id) || null;
     } catch (error) {
-      throw this.handleError(error, `Failed to fetch bounty ${id}`);
+      throw error;
     }
   }
 
   /**
    * Get bounties by status
    */
-  async getBounniesByStatus(status: BountyStatus): Promise<Bounty[]> {
+  async getBountiesByStatus(status: BountyStatus): Promise<Bounty[]> {
     try {
       const bounties = await this.getBounties();
       return bounties.filter(b => b.status === status);
     } catch (error) {
-      throw this.handleError(error, `Failed to fetch ${status} bounties`);
+      throw error;
     }
   }
 
@@ -92,14 +101,14 @@ export class OwockibotClient {
    * Get open bounties (convenience method)
    */
   async getOpenBounties(): Promise<Bounty[]> {
-    return this.getBounniesByStatus('open');
+    return this.getBountiesByStatus('open');
   }
 
   /**
    * Get completed bounties (convenience method)
    */
   async getCompletedBounties(): Promise<Bounty[]> {
-    return this.getBounniesByStatus('completed');
+    return this.getBountiesByStatus('completed');
   }
 
   /**
@@ -114,7 +123,7 @@ export class OwockibotClient {
         b.description.toLowerCase().includes(searchTerm)
       );
     } catch (error) {
-      throw this.handleError(error, `Failed to search bounties for "${keyword}"`);
+      throw error;
     }
   }
 
@@ -128,7 +137,7 @@ export class OwockibotClient {
         b.creator_address.toLowerCase() === creatorAddress.toLowerCase()
       );
     } catch (error) {
-      throw this.handleError(error, `Failed to fetch bounties by creator ${creatorAddress}`);
+      throw error;
     }
   }
 
@@ -143,7 +152,7 @@ export class OwockibotClient {
         b.claimer_address.toLowerCase() === claimerAddress.toLowerCase()
       );
     } catch (error) {
-      throw this.handleError(error, `Failed to fetch bounties claimed by ${claimerAddress}`);
+      throw error;
     }
   }
 
@@ -159,9 +168,9 @@ export class OwockibotClient {
     try {
       const response: AxiosResponse<TreasuryStats> = await this.http.get('/treasury');
       return response.data;
-    } catch (error) {
-      // If endpoint doesn't exist, return mock data based on website
-      if (error.status === 404) {
+    } catch (error: any) {
+      // If endpoint doesn't exist and returns 404, return mock data based on website
+      if (error instanceof NotFoundError) {
         return {
           treasury_value: 31000, // $31K as shown on website
           eth_balance: 0, // Would need actual data
@@ -170,7 +179,7 @@ export class OwockibotClient {
           mcap_to_treasury: 8.4 // 261k / 31k
         };
       }
-      throw this.handleError(error, 'Failed to fetch treasury stats');
+      throw error;
     }
   }
 
@@ -182,9 +191,9 @@ export class OwockibotClient {
     try {
       const response: AxiosResponse<TokenInfo> = await this.http.get('/token');
       return response.data;
-    } catch (error) {
-      // If endpoint doesn't exist, return known data
-      if (error.status === 404) {
+    } catch (error: any) {
+      // If endpoint doesn't exist and returns 404, return known data
+      if (error instanceof NotFoundError) {
         return {
           symbol: '$owockibot',
           total_supply: 100000000000, // 100B as shown on website
@@ -194,7 +203,7 @@ export class OwockibotClient {
           chain_id: 8453 // Base
         };
       }
-      throw this.handleError(error, 'Failed to fetch token info');
+      throw error;
     }
   }
 
@@ -206,9 +215,9 @@ export class OwockibotClient {
     try {
       const response: AxiosResponse<RatioData> = await this.http.get('/ratio');
       return response.data;
-    } catch (error) {
-      // If endpoint doesn't exist, return data based on website
-      if (error.status === 404) {
+    } catch (error: any) {
+      // If endpoint doesn't exist and returns 404, return data based on website
+      if (error instanceof NotFoundError) {
         return {
           token: {
             total_supply: 100000000000, // 100B
@@ -230,7 +239,7 @@ export class OwockibotClient {
           }
         };
       }
-      throw this.handleError(error, 'Failed to fetch ratio data');
+      throw error;
     }
   }
 
@@ -242,9 +251,9 @@ export class OwockibotClient {
     try {
       const response: AxiosResponse<SwarmStats> = await this.http.get('/stats');
       return response.data;
-    } catch (error) {
-      // If endpoint doesn't exist, return data based on website
-      if (error.status === 404) {
+    } catch (error: any) {
+      // If endpoint doesn't exist and returns 404, return data based on website
+      if (error instanceof NotFoundError) {
         const bounties = await this.getBounties().catch(() => []);
         const openBounties = bounties.filter(b => b.status === 'open').length;
         const completedBounties = bounties.filter(b => b.status === 'completed');
@@ -258,7 +267,7 @@ export class OwockibotClient {
           total_volume: 740 // As shown on website
         };
       }
-      throw this.handleError(error, 'Failed to fetch swarm stats');
+      throw error;
     }
   }
 
@@ -281,18 +290,5 @@ export class OwockibotClient {
    */
   getBaseUrl(): string {
     return this.baseUrl;
-  }
-
-  /**
-   * Handle API errors consistently
-   */
-  private handleError(error: any, context: string): ApiError {
-    const apiError: ApiError = {
-      message: `${context}: ${error.message || 'Unknown error'}`,
-      status: error.status,
-      code: error.code
-    };
-    
-    return apiError;
   }
 }

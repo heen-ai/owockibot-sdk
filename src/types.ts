@@ -167,19 +167,75 @@ export interface OwockibotClientConfig {
 }
 
 /**
- * API response wrapper
+ * Base class for all owockibot SDK errors
+ */
+export class OwockibotError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OwockibotError';
+  }
+}
+
+/**
+ * Represents an error response from the API
+ */
+export class ApiError extends OwockibotError {
+  status?: number;
+  code?: string;
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Error for 404 Not Found responses
+ */
+export class NotFoundError extends ApiError {
+  constructor(message: string = 'Resource not found', code?: string) {
+    super(message, 404, code);
+    this.name = 'NotFoundError';
+  }
+}
+
+/**
+ * Error for 400 Bad Request / Validation errors
+ */
+export class ValidationError extends ApiError {
+  constructor(message: string = 'Validation failed', code?: string) {
+    super(message, 400, code);
+    this.name = 'ValidationError';
+  }
+}
+
+/**
+ * Error for 429 Rate Limit Exceeded responses
+ */
+export class RateLimitError extends ApiError {
+  constructor(message: string = 'Rate limit exceeded', code?: string) {
+    super(message, 429, code);
+    this.name = 'RateLimitError';
+  }
+}
+
+/**
+ * Error for 5xx Server errors
+ */
+export class ServerError extends ApiError {
+  constructor(message: string = 'Server error', status?: number, code?: string) {
+    super(message, status || 500, code);
+    this.name = 'ServerError';
+  }
+}
+
+/**
+ * API response wrapper (re-added for AxiosResponse typing)
  */
 export interface ApiResponse<T> {
   data: T;
   status: number;
   statusText: string;
-}
-
-/**
- * Error response from API
- */
-export interface ApiError {
-  message: string;
-  code?: string;
-  status?: number;
 }

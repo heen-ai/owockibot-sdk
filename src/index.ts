@@ -1,5 +1,6 @@
 // Main client export
-export { OwockibotClient } from './client';
+import { OwockibotClient } from './client';
+export { OwockibotClient };
 
 // Type exports
 export {
@@ -11,8 +12,11 @@ export {
   TokenInfo,
   RatioData,
   SwarmStats,
-  ApiResponse,
-  ApiError
+  ApiError,
+  NotFoundError,
+  ValidationError,
+  RateLimitError,
+  ServerError
 } from './types';
 
 // Re-export for convenience

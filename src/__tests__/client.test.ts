@@ -6,28 +6,31 @@ import axios from 'axios';
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+// Create a mock axios instance
+const mockAxiosInstance = {
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+  interceptors: {
+    response: {
+      use: jest.fn()
+    }
+  }
+};
+
 describe('OwockibotClient', () => {
   let client: OwockibotClient;
   
   beforeEach(() => {
-    client = new OwockibotClient();
     // Reset all mocks
     jest.clearAllMocks();
     
     // Mock axios.create to return a mock instance
-    const mockAxiosInstance = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-      interceptors: {
-        response: {
-          use: jest.fn()
-        }
-      }
-    };
-    
     mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
+    
+    // Create client after setting up mocks
+    client = new OwockibotClient();
   });
 
   describe('constructor', () => {
@@ -67,13 +70,13 @@ describe('OwockibotClient', () => {
       ];
 
       // Mock the HTTP client's get method
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: mockBounties
       });
 
       const result = await client.getBounties();
       expect(result).toEqual(mockBounties);
-      expect((client as any).http.get).toHaveBeenCalledWith('/bounty-board');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/bounty-board');
     });
   });
 
@@ -110,7 +113,7 @@ describe('OwockibotClient', () => {
         }
       ];
 
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: mockBounties
       });
 
@@ -119,7 +122,7 @@ describe('OwockibotClient', () => {
     });
 
     it('should return null for non-existent bounty', async () => {
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: []
       });
 
@@ -161,7 +164,7 @@ describe('OwockibotClient', () => {
         }
       ];
 
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: mockBounties
       });
 
@@ -204,7 +207,7 @@ describe('OwockibotClient', () => {
         }
       ];
 
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: mockBounties
       });
 
@@ -216,7 +219,7 @@ describe('OwockibotClient', () => {
 
   describe('ping', () => {
     it('should return true when API is accessible', async () => {
-      (client as any).http.get = jest.fn().mockResolvedValue({
+      mockAxiosInstance.get.mockResolvedValue({
         data: []
       });
 
@@ -225,7 +228,7 @@ describe('OwockibotClient', () => {
     });
 
     it('should return false when API is not accessible', async () => {
-      (client as any).http.get = jest.fn().mockRejectedValue(new Error('Network error'));
+      mockAxiosInstance.get.mockRejectedValue(new Error('Network error'));
 
       const result = await client.ping();
       expect(result).toBe(false);
